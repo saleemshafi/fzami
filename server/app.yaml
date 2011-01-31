@@ -1,0 +1,18 @@
+application: myfzami
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+- url: /scripts
+  static_dir: scripts
+  
+- url: /styles
+  static_dir: styles
+
+- url: /api/.*
+  script: api.py
+
+- url: .*
+  script: main.py
+  

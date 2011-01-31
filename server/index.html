@@ -1,0 +1,72 @@
+<html>
+<head>
+<title> fzami </title>
+<style>
+	body, td, th {font-family: verdana; font-size: 12px; color: #404040;}
+	#timetable {border-width: 1px; border-style: outset; border-collapse: collapse; border-color: gray; width: 9em;}
+	#timetable td, #timetable th {border-width: 1px; border-spacing: 1px; padding: 2px 4px; border-style: inset; border-color: #CCCCCC;}
+	#timetable th {color:black; text-align: center; font-weight: bold; background-color: #F8F7F4;}
+</style>
+</head>
+
+<body>
+
+<!--<script type="text/javascript" src="http://code.jquery.com/jquery-1.4.4.js"></script>-->
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js"></script>
+<script type="text/javascript" src="PrayTimes.js"></script>
+<script>
+function updatePrayerTimes(location) {
+	$("#city").text(location.city);
+	var date = new Date();
+	var offset = date.getTimezoneOffset() / -60;
+
+	prayTimes.setMethod('MWL');
+	var times = prayTimes.getTimes(date, [location.latitude, location.longitude], offset, false, '12h');
+	
+	$("#fajrtime").text( times['fajr'] );
+	$("#zuhrtime").text( times['dhuhr'] );
+	$("#asrtime").text( times['asr'] );
+	$("#maghribtime").text( times['maghrib'] );
+	$("#ishatime").text( times['isha'] );
+}
+
+$(document).ready(function(){
+
+	$.ajax({ url: "http://api.hostip.info/get_html.php?ip=70.112.30.169&position=true", 
+			context: document.body, 
+			dataType: 'text',
+			success: function(data){
+				var location = { "city":"Austin, TX", "latitude":30.3878, "longitude":-97.7072 };
+
+				var i = data.indexOf("City:");
+				location.city = data.substring(i+6, data.indexOf("\n", i));
+				i = data.indexOf("Latitude:");
+				location.latitude = data.substring(i+10, data.indexOf("\n", i)) - 0;
+				i = data.indexOf("Longitude:");
+				location.longitude = data.substring(i+11, data.indexOf("\n", i)) - 0;
+				
+/*
+  Country: UNITED STATES (US)
+  City: Sugar Grove, IL
+  Latitude: 41.7696
+  Longitude: -88.4588
+  IP: 12.215.42.19
+*/
+
+				updatePrayerTimes(location);
+      }})
+});
+
+</script>
+<br>
+<p id="city" align="center"><p>
+<div align="center" id="table">
+	<div class="prayer">Fajr<span id="fajrtime"></span></div>
+	<div class="prayer">Zuhr<span id="zuhrtime"></span></div>
+	<div class="prayer">Asr<span id="asrtime"></span></div>
+	<div class="prayer">Maghrib<span id="maghribtime"></span></div>
+	<div class="prayer">Isha<span id="ishatime"></span></div>
+</div>
+
+</body>
+</html>
