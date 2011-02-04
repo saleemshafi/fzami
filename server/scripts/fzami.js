@@ -89,3 +89,20 @@ function handleNoGeolocation() {
 	updateLocation(30, -97);
 	updateCity("Austin, TX");
 }
+
+function submitLog() {
+	var date = "20110131";
+	var actions = [];
+	var checkedActions = $("#log_form input:checked");
+	for (var i=0; i < checkedActions.length; i++) {
+		actions[i] = checkedActions[i].value;
+	}
+	$.ajax({
+			url: "/api/log/"+date,
+			type: "POST",
+			data: {"user":"10", "actions": actions},
+			success: function() { alert("got it!"); },
+			error: function() { alert("d'oh!"); }
+		});
+	return false;
+}
