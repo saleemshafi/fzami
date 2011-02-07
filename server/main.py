@@ -48,7 +48,7 @@ class MainHandler(webapp.RequestHandler):
 			self.response.out.write('''</div>
 			<a href="#settings" onclick="$('#prayer_settings').addClass('open')">Settings</a>
 			<p id="city" align="center"><p>
-			<div align="center" id="prayers">
+			<div align="center" id="prayers"  onclick="$('#log_popup').addClass('open')">
 				<div class="prayer">Fajr<span id="fajrtime"></span></div>
 				<div class="prayer">Zuhr<span id="zuhrtime"></span></div>
 				<div class="prayer">Asr<span id="asrtime"></span></div>
@@ -73,6 +73,17 @@ class MainHandler(webapp.RequestHandler):
 						<option>Hanafi</option>
 						<option>Standard</option>
 					</select></div>
+					<button type="submit">Save Settings</button>
+				</form>
+			</div>
+			<div id="log_popup">
+				<a href="#" onclick="$('#log_popup').removeClass('open')">Close</a>
+				<form id="log_form" method="get" action="#" onsubmit="return submitLog();">
+					<div><input type="checkbox" name="actions" id="actions_fajr" value="fajr"><label for="actions_fajr">Fajr</label></div>
+					<div><input type="checkbox" name="actions" id="actions_zuhr" value="zuhr"><label for="actions_fajr">Zuhr</label></div>
+					<div><input type="checkbox" name="actions" id="actions_asr" value="asr"><label for="actions_fajr">Asr</label></div>
+					<div><input type="checkbox" name="actions" id="actions_maghrib" value="maghrib"><label for="actions_fajr">Maghrib</label></div>
+					<div><input type="checkbox" name="actions" id="actions_isha" value="isha"><label for="actions_fajr">Isha</label></div>
 					<button type="submit">Save Settings</button>
 				</form>
 			</div>
