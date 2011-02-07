@@ -246,6 +246,7 @@ class PrayTime():
 
 		if isMin(params['imsak']):
 			times['imsak'] = times['fajr'] - eval(params['imsak']) / 60.0
+		# need to ask about 'min' settings
 		if isMin(params['maghrib']):
 			times['maghrib'] = times['sunset'] - eval(params['maghrib']) / 60.0
 		if isMin(params['isha']):
