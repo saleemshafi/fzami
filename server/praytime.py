@@ -124,7 +124,7 @@ class PrayTime():
 			}
 		self.numIterations = 1
 		self.timeFormat = "24h"
-		self.offset = {}
+		self.offsets = {}
 		
 	#---------------------- Initialization -----------------------
 			
@@ -136,7 +136,7 @@ class PrayTime():
 
 		# init time offsets
 		for name in PT_TIME_NAMES:
-			self.offset[name] = 0
+			self.offsets[name] = 0
 
 #-------------------- Interface Functions --------------------
 	def setMethod(self, method):
@@ -149,7 +149,7 @@ class PrayTime():
 			self.settings[name] = value
 
 	def tune(self, timeOffsets):
-		for name, value in timeOffsets.enumerate():
+		for name, value in timeOffsets.iteritems():
 			self.offsets[name] = value
 			
 	def getMethod(self):
@@ -257,7 +257,7 @@ class PrayTime():
 	# apply offsets to the times
 	def tuneTimes(self, times):
 		for name, value in times.iteritems():
-			times[name] += self.offset[name] / 60.0
+			times[name] += self.offsets[name] / 60.0
 		return times
 
 	# convert times to given time format
@@ -347,7 +347,7 @@ def getFormattedTime(time, format, suffixes = None):
 	
 	minutes = floor((time- hours)* 60)
 	suffix = suffixes[ 0 if hours < 12 else 1 ] if format == '12h' else ''
-	formattedTime = "%02d:%02d" % (hours, minutes) if format == "24h" else "%2d:%02d" % ((hours+11)%12+1, minutes)
+	formattedTime = "%02d:%02d" % (hours, minutes) if format == "24h" else "%d:%02d" % ((hours+11)%12+1, minutes)
 	return formattedTime + suffix
 
 #---------------------- Misc Functions -----------------------
