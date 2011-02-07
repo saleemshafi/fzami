@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 
 from datetime import date
-from math import *
 from datetime import datetime
+from math import *
+from trig import *
+import re
 
-#--------------------- Copyright Block ----------------------
+# --------------------- Copyright Block ----------------------
 
-# PrayTime.py: Prayer Times Calculator (ver 1.2.1)
+# PrayTimes.js: Prayer Times Calculator (ver 2.1)
 # Copyright (C) 2007-2010 PrayTimes.org
 
-# Developer: Saleem Shafi
-# License: GNU General Public License, ver 3
+# Developer: Hamid Zarrabi-Zadeh
+# License: GNU LGPL v3.0
 
 # TERMS OF USE:
 	# Permission is granted to use this code, with or
@@ -23,288 +25,290 @@ from datetime import datetime
 
 # PLEASE DO NOT REMOVE THIS COPYRIGHT BLOCK.
 
-#--------------------- Help and Manual ----------------------
+# --------------------- Help and Manual ----------------------
 
 # User's Manual:
 # http://praytimes.org/manual
 
-# Calculating Formulas:
+# Calculation Formulas:
 # http://praytimes.org/calculation
 
+# ------------------------ User Interface -------------------------
 
+	# getTimes (date, coordinates, timeZone [, dst [, timeFormat]])
 
-#------------------------ User Interface -------------------------
+	# setMethod (method)       // set calculation method
+	# adjust (parameters)      // adjust calculation parameters
+	# tune (offsets)           // tune times by given offsets
 
-
-	# getPrayerTimes (date, latitude, longitude, timeZone)
-	# getDatePrayerTimes (year, month, day, latitude, longitude, timeZone)
-
-	# setCalcMethod (methodID)
-	# setAsrMethod (methodID)
-
-	# setFajrAngle (angle)
-	# setMaghribAngle (angle)
-	# setIshaAngle (angle)
-	# setDhuhrMinutes (minutes)  	# minutes after mid-day
-	# setMaghribMinutes (minutes)	# minutes after sunset
-	# setIshaMinutes (minutes)	    # minutes after maghrib
-
-	# setHighLatsMethod (methodID)  # adjust method for higher latitudes
-
-	# setTimeFormat (timeFormat)
-	# floatToTime24 (time)
-	# floatToTime12 (time)
-	# floatToTime12NS (time)
-
+	# getMethod ()             // get calculation method
+	# getSetting ()            // get current calculation parameters
+	# getOffsets ()            // get current time offsets
 
 #------------------------- Sample Usage --------------------------
 
-#	prayTime.setCalcMethod(prayTime.ISNA);
-#	var times = prayTime.getPrayerTimes(new Date(), 43, -80, -5);
-#	document.write('Sunrise = '+ times[1])
+	# var PT = new PrayTimes('ISNA');
+	# var times = PT.getTimes(new Date(), [-80, 43], -5);
+	# document.write('Sunrise = '+ times.sunrise)
+
+
 
 #------------------------ Constants --------------------------
 
+# Time Names
+PT_TIME_NAMES = {
+		'imsak'    : 'Imsak',
+		'fajr'     : 'Fajr',
+		'sunrise'  : 'Sunrise',
+		'dhuhr'    : 'Dhuhr',
+		'asr'      : 'Asr',
+		'sunset'   : 'Sunset',
+		'maghrib'  : 'Maghrib',
+		'isha'     : 'Isha',
+		'midnight' : 'Midnight'
+	}
 
-	# Calculation Methods
-PT_CALC_JAFARI     = 0    # Ithna Ashari
-PT_CALC_KARACHI    = 1    # University of Islamic Sciences, Karachi
-PT_CALC_ISNA       = 2    # Islamic Society of North America (ISNA)
-PT_CALC_MWL        = 3    # Muslim World League (MWL)
-PT_CALC_MAKKAH     = 4    # Umm al-Qura, Makkah
-PT_CALC_EGYPT      = 5    # Egyptian General Authority of Survey
-PT_CALC_CUSTOM     = 6    # Custom Setting
-PT_CALC_TEHRAN     = 7    # Institute of Geophysics, University of Tehran
+PT_ASR_METHODS = {'Standard': 1, 'Hanafi': 2}
 
-	# Juristic Methods
-PT_JURIST_SHAFII     = 0    # Shafii (standard)
-PT_JURIST_HANAFI     = 1    # Hanafi
+# Default Parameters in Calculation Methods
+PT_CALC_DEFAULT_PARAMS = {
+		'maghrib': '0 min', 'midnight': 'Standard'
+	}
 
-	# Adjusting Methods for Higher Latitudes
-PT_ADJUST_NONE        = 0    # No adjustment
-PT_ADJUST_MIDNIGHT    = 1    # middle of night
-PT_ADJUST_ONE_SEVENTH = 2    # 1/7th of night
-PT_ADJUST_ANGLE       = 3    # angle/60th of night
+# Calculation Methods
+PT_CALC_METHODS = {
+		'MWL': {
+			'name': 'Muslim World League',
+			'params': { 'fajr': 18, 'isha': 17 } },
+		'ISNA': {
+			'name': 'Islamic Society of North America (ISNA)',
+			'params': { 'fajr': 15, 'isha': 15 } },
+		'Egypt': {
+			'name': 'Egyptian General Authority of Survey',
+			'params': { 'fajr': 19.5, 'isha': 17.5 } },
+		'Makkah': {
+			'name': 'Umm Al-Qura University, Makkah',
+			'params': { 'fajr': 18.5, 'isha': '90 min' } },  # fajr was 19 degrees before 1430 hijri
+		'Karachi': {
+			'name': 'University of Islamic Sciences, Karachi',
+			'params': { 'fajr': 18, 'isha': 18 } },
+		'Tehran': {
+			'name': 'Institute of Geophysics, University of Tehran',
+			'params': { 'fajr': 17.7, 'isha': 14, 'maghrib': 4.5, 'midnight': 'Jafari' } },  # isha is not explicitly specified in this method
+		'Jafari': {
+			'name': 'Shia Ithna-Ashari, Leva Institute, Qum',
+			'params': { 'fajr': 16, 'isha': 14, 'maghrib': 4, 'midnight': 'Jafari' } }
+	}
 
-	# Time Formats
-PT_TIME_24         = 0    # 24-hour format
-PT_TIME_12         = 1    # 12-hour format
-PT_TIME_12NS       = 2    # 12-hour format with no suffix
-PT_TIME_FLOAT      = 3    # floating point number
+# set methods defaults
+for method, config in PT_CALC_METHODS.iteritems():
+	for name, value in PT_CALC_DEFAULT_PARAMS.iteritems():
+		if not name in config['params'] or config['params'][name] is None:
+			config['params'][name] = value
 
-	# Time Names
-PT_TIME_NAMES = ('Fajr', 'Sunrise',	'Dhuhr', 'Asr',	'Sunset', 'Maghrib', 'Isha')
-
+PT_TIME_SUFFIX = ("am", "pm")
 PT_INVALID_TIME  = '-----'	 # The string used for invalid times
 
 EPOCH = datetime.utcfromtimestamp(0)
 
-#--------------------- PrayTime Class -----------------------
+#----------------------- PrayTimes Object ------------------------
 
 class PrayTime():
 
-#---------------------- Global Variables --------------------
-	def __init__( self ) :
-		self.asrJuristic  = 0		# Juristic method for Asr
-		self.dhuhrMinutes = 0		# minutes after mid-day for Dhuhr
-		self.adjustHighLats = 1	    # adjusting method for higher latitudes
-		self.timeFormat   = 0		# time format
+	def __init__( self, method = "MWL" ) :
+		self.settings = {
+			"imsak"    : '10 min',
+			"dhuhr"    : '0 min',
+			"asr"      : 'Standard',
+			"highLats" : 'NightMiddle'
+			}
+		self.numIterations = 1
+		self.timeFormat = "24h"
+		self.offset = {}
+		
+	#---------------------- Initialization -----------------------
+			
+		# initialize settings
+		self.calcMethod = method if method in PT_CALC_METHODS else 'MWL'
+		params = PT_CALC_METHODS[self.calcMethod]['params']
+		for name, value in params.iteritems():
+			self.settings[name] = value
 
-#--------------------- Technical Settings --------------------
-		# number of iterations needed to compute times
-		self.numIterations = 1;		
-
-#------------------- Calc Method Parameters --------------------
-		self.calcParams = [ (16, 0, 4, 0, 14),
-							(18, 1, 0, 0, 18),
-							(15, 1, 0, 0, 15),
-							(18, 1, 0, 0, 17),
-							(18.5, 1, 0, 1, 90),
-							(19.5, 1, 0, 0, 17.5),
-							[],
-							(18, 1, 0, 0, 17) ] 
-
-		self.setCalcMethod( PT_CALC_MWL )
+		# init time offsets
+		for name in PT_TIME_NAMES:
+			self.offset[name] = 0
 
 #-------------------- Interface Functions --------------------
+	def setMethod(self, method):
+		if method in PT_CALC_METHODS:
+			self.adjust(PT_CALC_METHODS[method].params)
+			self.calcMethod = method
+
+	def adjust(self, params):
+		for name, value in params.iteritems():
+			self.settings[name] = value
+
+	def tune(self, timeOffsets):
+		for name, value in timeOffsets.enumerate():
+			self.offsets[name] = value
+			
+	def getMethod(self):
+		return self.method
+
+	def getSettings(self):
+		return self.settings
+		
+	def getOffsets(self):
+		return self.offsets
+
+	def getDefaults(self):
+		return PT_CALC_METHODS
 
 	# return prayer times for a given date
-	def getDatePrayerTimes(self, year, month, day, latitude, longitude, timeZone):
-		self.lat = latitude
-		self.lng = longitude
-		self.timeZone = timeZone
-		self.JDate = julianDate(year, month, day)- longitude/ (15* 24)
-		return self.computeDayTimes()
+	def getTimes(self, date, coords, timezone, dst = False, format = None):
+		self.lat = coords[0]
+		self.lng = coords[1]
+		self.elv = coords[2] if len(coords)>2 else 0
+		if not format == None:
+			self.timeFormat = format
+		self.timeZone = timezone + ( 1 if dst else 0 )
+		self.jDate = julian(date.year, date.month, date.day) - self.lng / (15 * 24.0)
+		return self.computeTimes()
 
-	# return prayer times for a given date
-	def getPrayerTimes(self, date, latitude, longitude, timeZone):
-		return self.getDatePrayerTimes(date.year, date.month, date.day,	latitude, longitude, timeZone)
-
-	# set the calculation method
-	def setCalcMethod(self, methodID):
-		self.calcMethod = methodID
-		self.calcParams[PT_CALC_CUSTOM] = [0] * len(self.calcParams[methodID])
-		for setting in xrange(0, 5):
-			self.calcParams[PT_CALC_CUSTOM][setting] = self.calcParams[methodID][setting]
-
-	# set the juristic method for Asr
-	def setAsrMethod(self, methodID):
-		if methodID < 0 or methodID > 1:
-			return;
-		self.asrJuristic = methodID;
-
-	# set the angle for calculating Fajr
-	def setFajrAngle(self, angle):
-		self.calcParams[PT_CALC_CUSTOM][PT_FAJR_ANGLE] = angle
-		self.setCalcMethod(PT_CALC_CUSTOM)
-
-	# set the angle for calculating Maghrib
-	def setMaghribAngle(self, angle):
-		self.calcParams[PT_CALC_CUSTOM][1] = 0
-		self.calcParams[PT_CALC_CUSTOM][2] = angle
-		self.setCalcMethod(PT_CALC_CUSTOM)
-
-	# set the angle for calculating Isha
-	def setIshaAngle(self, angle):
-		self.calcParams[PT_CALC_CUSTOM][3] = 0
-		self.calcParams[PT_CALC_CUSTOM][4] = angle
-		self.setCalcMethod(PT_CALC_CUSTOM)
-
-	# set the minutes after mid-day for calculating Dhuhr
-	def setDhuhrMinutes(self, minutes):
-		self.dhuhrMinutes = minutes;
-
-	# set the minutes after Sunset for calculating Maghrib
-	def setMaghribMinutes(self, minutes):
-		self.calcParams[PT_CALC_CUSTOM][1] = 1
-		self.calcParams[PT_CALC_CUSTOM][2] = minutes
-		self.setCalcMethod(PT_CALC_CUSTOM)
-
-	# set the minutes after Maghrib for calculating Isha
-	def setIshaMinutes(self, minutes):
-		self.calcParams[PT_CALC_CUSTOM][3] = 1
-		self.calcParams[PT_CALC_CUSTOM][4] = minutes
-		self.setCalcMethod(PT_CALC_CUSTOM)
-
-	# set adjusting method for higher latitudes
-	def setHighLatsMethod(self, methodID):
-		self.adjustHighLats = methodID
-
-	# set the time format
-	def setTimeFormat(self, timeFormat):
-		self.timeFormat = timeFormat
 
 #---------------------- Compute Prayer Times -----------------------
 
-	# compute prayer times at given julian date
-	def computeTimes(self, times):
-		t = dayPortion(times)
-		Fajr    = self.computeTime(180- self.calcParams[self.calcMethod][0], t[0])
-		Sunrise = self.computeTime(180- 0.833, t[1])
-		Dhuhr   = self.computeMidDay(t[2])
-		Asr     = self.computeAsr(1+ self.asrJuristic, t[3])
-		Sunset  = self.computeTime(0.833, t[4])
-		Maghrib = self.computeTime(self.calcParams[self.calcMethod][2], t[5])
-		Isha    = self.computeTime(self.calcParams[self.calcMethod][4], t[6])
-		return [Fajr, Sunrise, Dhuhr, Asr, Sunset, Maghrib, Isha]
+	# compute mid-day time
+	def midDay(self, time):
+		eqt = sunPosition(self.jDate + time)[1]
+		return fixhour(12 - eqt)
+
+	# compute time for a given angle 
+	def sunAngleTime(self, angle, time, direction = None):
+		decl = sunPosition(self.jDate + time)[0]
+		noon = self.midDay(time)
+		t = 1/15.0* darccos((-dsin(angle)- dsin(decl)* dsin(self.lat))/
+				(dcos(decl)* dcos(self.lat)))
+		return noon+ (-t if direction == 'ccw' else t)
+
+	# compute the time of Asr
+	def asrTime(self, factor, time):  # Shafii: factor=1, Hanafi: step=2
+		decl = sunPosition(self.jDate + time)[0]
+		angle = -darccot(factor + dtan(abs(self.lat - decl)))
+		return self.sunAngleTime(angle, time)
 
 	# compute prayer times at given julian date
-	def computeDayTimes(self):
-		times = [5, 6, 12, 13, 18, 18, 18]  #default times
+	def computePrayerTimes(self, times):
+		times = dayPortion(times)
+		params = self.settings
+		
+		imsak   = self.sunAngleTime( eval(params['imsak']), times['imsak'], 'ccw')
+		fajr    = self.sunAngleTime( eval(params['fajr']), times['fajr'], 'ccw')
+		sunrise = self.sunAngleTime( riseSetAngle(self.elv), times['sunrise'], 'ccw')
+		dhuhr   = self.midDay(times['dhuhr'])
+		asr     = self.asrTime(asrFactor(params['asr']), times['asr'])
+		sunset  = self.sunAngleTime( riseSetAngle(self.elv), times['sunset'])
+		maghrib = self.sunAngleTime(eval(params['maghrib']), times['maghrib'])
+		isha    = self.sunAngleTime(eval(params['isha']), times['isha']) 
+		return {
+				'imsak': imsak, 'fajr': fajr, 'sunrise': sunrise, 'dhuhr': dhuhr,
+				'asr': asr, 'sunset': sunset, 'maghrib': maghrib, 'isha': isha
+			}
+
+	# compute prayer times
+	def computeTimes(self):
+		times = {
+				'imsak': 5, 'fajr': 5, 'sunrise': 6, 'dhuhr': 12,
+				'asr': 13, 'sunset': 18, 'maghrib': 18, 'isha': 18
+			}
+		# main iterations
 		for i in xrange( 0, self.numIterations):
-			times = self.computeTimes(times)
-
+			times = self.computePrayerTimes(times)
 		times = self.adjustTimes(times)
-		return self.adjustTimesFormat(times)
+		# add midnight time
+		if self.settings['midnight'] == 'Jafari':
+			times['midnight'] = times['maghrib'] + timeDiff(times['maghrib'], times['fajr']) / 2
+		else:
+			times['midnight'] = times['sunset'] + timeDiff(times['sunset'], times['sunrise']) / 2
 
+		times = self.tuneTimes(times)
+		return self.modifyFormats(times)
+		
 	# adjust times in a prayer time array
 	def adjustTimes(self, times):
-		for i in xrange(0, 7):
-			times[i] += self.timeZone - self.lng / 15.0
-		times[2] += self.dhuhrMinutes / 60.0   # Dhuhr
-		if self.calcParams[self.calcMethod][1] == 1: # Maghrib
-			times[5] = times[4] + self.calcParams[self.calcMethod][2]/ 60.0
-		if (self.calcParams[self.calcMethod][3] == 1): # Isha
-			times[6] = times[5] + self.calcParams[self.calcMethod][4]/ 60.0
+		params = self.settings
+		tzAdjust = self.timeZone - self.lng / 15.0
+		for t,v in times.iteritems():
+			times[t] += tzAdjust
 
-		if self.adjustHighLats != None:
-			times = self.adjustHighLatTimes(times)
-		return times
+		if params['highLats'] != None:
+			times = self.adjustHighLats(times)
 
-	# convert times array to given time format
-	def adjustTimesFormat(self, times):
-		if self.timeFormat == PT_TIME_FLOAT:
-			return times
-		for i in xrange(0,7):
-			if self.timeFormat == PT_TIME_12:
-				times[i] = floatToTime12(times[i])
-			else: 
-				if self.timeFormat == PT_TIME_12NS:
-					times[i] = floatToTime12(times[i], true)
-				else:
-					times[i] = floatToTime24(times[i])
-		return times
-
-	# adjust Fajr, Isha and Maghrib for locations in higher latitudes
-	def adjustHighLatTimes(self, times):
-		nightTime = timeDiff(times[4], times[1]) # sunset to sunrise
-
-		# Adjust Fajr
-		FajrDiff = self.nightPortion(self.calcParams[self.calcMethod][0])* nightTime
-		if isNaN(times[0]) or timeDiff(times[0], times[1]) > FajrDiff:
-			times[0] = times[1]- FajrDiff
-
-		# Adjust Isha
-		IshaAngle = self.calcParams[self.calcMethod][4] if self.calcParams[self.calcMethod][3] == 0 else 18
-		IshaDiff = self.nightPortion(IshaAngle)* nightTime
-		if isNaN(times[6]) or timeDiff(times[4], times[6]) > IshaDiff:
-			times[6] = times[4]+ IshaDiff
-
-		# Adjust Maghrib
-		MaghribAngle = self.calcParams[self.calcMethod][2] if self.calcParams[self.calcMethod][1] == 0 else 4
-		MaghribDiff = self.nightPortion(MaghribAngle)* nightTime
-		if isNaN(times[5]) or timeDiff(times[4], times[5]) > MaghribDiff:
-			times[5] = times[4]+ MaghribDiff
+		if isMin(params['imsak']):
+			times['imsak'] = times['fajr'] - eval(params['imsak']) / 60.0
+		if isMin(params['maghrib']):
+			times['maghrib'] = times['sunset'] - eval(params['maghrib']) / 60.0
+		if isMin(params['isha']):
+			times['isha'] = times['maghrib'] - eval(params['isha']) / 60.0
+		times['dhuhr'] += eval(params['dhuhr']) / 60.0
 
 		return times
+
+	# apply offsets to the times
+	def tuneTimes(self, times):
+		for name, value in times.iteritems():
+			times[name] += self.offset[name] / 60.0
+		return times
+
+	# convert times to given time format
+	def modifyFormats(self, times):
+		for name, value in times.iteritems():
+			times[name] = getFormattedTime(times[name], self.timeFormat)
+		return times
+	
+	# adjust times for locations in higher latitudes
+	def adjustHighLats(self, times):
+		params = self.settings
+		nightTime = timeDiff(times['sunset'], times['sunrise']) # sunset to sunrise
+		times['imsak'] = self.adjustHLTime(times['imsak'], times['sunrise'], eval(params['imsak']), nightTime, 'ccw')
+		times['fajr']  = self.adjustHLTime(times['fajr'], times['sunrise'], eval(params['fajr']), nightTime, 'ccw')
+		times['isha']  = self.adjustHLTime(times['isha'], times['sunset'], eval(params['isha']), nightTime)
+		times['maghrib'] = self.adjustHLTime(times['maghrib'], times['sunset'], eval(params['maghrib']), nightTime)
+		return times
+
+	# adjust a time for higher latitudes
+	def adjustHLTime(self, time, base, angle, night, direction = None):
+		portion = self.nightPortion(angle, night)
+		diff = timeDiff(time, base) if direction == 'ccw' else timeDiff(base, time)
+		if isNaN(time) or diff > portion:
+			time = base + (-portion if direction == 'ccw' else portion)
+		return time
 
 	# the night portion used for adjusting times in higher latitudes
-	def nightPortion(self, angle):
-		if self.adjustHighLats == PT_ADJUST_ANGLE:
-			return 1/60.0 * angle
-		if self.adjustHighLats == PT_ADJUST_MIDNIGHT:
-			return 1/2.0
-		if self.adjustHighLats == PT_ADJUST_ONE_SEVENTH:
-			return 1/7.0
+	def nightPortion(self, angle, night):
+		method = self.settings['highLats']
+		portion = 1/2.0  # midnight
+		if method == 'AngleBased':
+			portion = 1/60.0 * angle
+		if method == 'OneSeventh':
+			portion = 1/7.0
+		return portion * night
+
 
 #---------------------- Calculation Functions -----------------------
 
 # References:
 # http://www.ummah.net/astronomy/saltime
 # http://aa.usno.navy.mil/faq/docs/SunApprox.html
-
-	# compute mid-day (Dhuhr, Zawal) time
-	def computeMidDay(self, t):
-		T = equationOfTime(self.JDate + t)
-		Z = fixhour(12 - T)
-		return Z
-
-	# compute time for a given angle G
-	def computeTime(self, G, t):
-		D = sunDeclination(self.JDate+ t)
-		Z = self.computeMidDay(t);
-		V = 1/15.0* darccos((-dsin(G)- dsin(D)* dsin(self.lat))/
-				(dcos(D)* dcos(self.lat)))
-		return Z+ (-V if G>90 else V)
-
-	# compute the time of Asr
-	def computeAsr(self, step, t):  # Shafii: step=1, Hanafi: step=2
-		D = sunDeclination(self.JDate+ t)
-		G = -darccot(step+ dtan(abs(self.lat- D)))
-		return self.computeTime(G, t)
-
 			
+# convert hours to day portions
+def dayPortion(times):
+	for i in times:
+		times[i] /= 24.0
+	return times
+
 # compute declination angle of sun and equation of time
+# Ref: http://aa.usno.navy.mil/faq/docs/SunApprox.php
 def sunPosition(jd):
 	D = jd - 2451545.0
 	g = fixangle(357.529 + 0.98560028* D)
@@ -314,28 +318,39 @@ def sunPosition(jd):
 	R = 1.00014 - 0.01671*dcos(g) - 0.00014*dcos(2*g)
 	e = 23.439 - 0.00000036* D
 
-	d = darcsin(dsin(e)* dsin(L))
 	RA = darctan2(dcos(e)* dsin(L), dcos(L))/ 15.0
-	RA = fixhour(RA)
-	EqT = q/15.0 - RA
+	eqt = q/15.0 - fixhour(RA)
+	decl = darcsin(dsin(e)* dsin(L))
 
-	return (d, EqT)
+	return (decl, eqt)
 
-# compute equation of time
-def equationOfTime(jd):
-	return sunPosition(jd)[1]
+# get asr shadow factor
+def asrFactor(asrParam):
+	return PT_ASR_METHODS[asrParam] if asrParam in PT_ASR_METHODS else eval(asrParam)
 
-# compute declination angle of sun
-def sunDeclination(jd):
-	return sunPosition(jd)[0]
-				
+# return sun angle for sunset/sunrise
+def riseSetAngle(elevation = 0):
+	elevation = 0 if elevation == None else elevation
+	return 0.833 + 0.0347 * sqrt(elevation) # an approximation
+
+# convert float time to the given format (see timeFormats)
+def getFormattedTime(time, format, suffixes = None):
+	if isNaN(time):
+		return PT_INVALID_TIME
+	if format == 'Float':
+		return time
+	if suffixes == None:
+		suffixes = PT_TIME_SUFFIX
+
+	time = fixhour(time+ 0.5/ 60)  # add 0.5 minutes to round
+	hours = floor(time)
+	
+	minutes = floor((time- hours)* 60)
+	suffix = suffixes[ 0 if hours < 12 else 1 ] if format == '12h' else ''
+	formattedTime = "%02d:%02d" % (hours, minutes) if format == "24h" else "%2d:%02d" % ((hours+11)%12+1, minutes)
+	return formattedTime + suffix
+
 #---------------------- Misc Functions -----------------------
-
-# convert hours to day portions
-def dayPortion(times):
-	for i in xrange(0,7):
-		times[i] /= 24.0
-	return times
 
 # compute the difference between two times
 def timeDiff(time1, time2):
@@ -344,10 +359,19 @@ def timeDiff(time1, time2):
 def isNaN(value):
 	return not isinstance( value, (float, int, long, complex) )
 
+# convert given string into a number
+def eval(str):
+	return int(re.split('[^0-9.+-]', ""+str, 1)[0]) if isNaN(str) else str
+
+# detect if input contains 'min'
+def isMin(arg):
+	return isinstance( arg, str) and arg.find('min') > -1
+
+
 #---------------------- Julian Date Functions -----------------------
 
 # calculate julian date from a calendar date
-def julianDate(year, month, day):
+def julian(year, month, day):
 	if month <= 2:
 		year -= 1
 		month += 12
@@ -355,92 +379,7 @@ def julianDate(year, month, day):
 	B = 2 - A + floor(A / 4)
 	return floor(365.25 * (year + 4716)) + floor(30.6001 * (month + 1)) + day + B - 1524.5
 
-# convert a calendar date to julian date (second method)
-def calcJD(year, month, day):
-	J1970 = 2440587.5
-	theDay = date(year, month, day)
-	days = (theDay - EPOCH).days
-	return J1970 + days
-
-#---------------------- Time Formatting Functions -----------------------
-
-# convert float hours to 24h format
-def floatToTime24(time):
-	if isNaN(time):
-		return PT_INVALID_TIME
-	time = fixhour(time+ 0.5/ 60)  # add 0.5 minutes to round
-	hours = floor(time)
-	minutes = floor((time- hours)* 60)
-	return "%02d:%02d" % (hours, minutes)
-
-# convert float hours to 12h format
-def floatToTime12(time, noSuffix):
-	if isNaN(time):
-		return PT_INVALID_TIME
-	time = fixhour(time+ 0.5/ 60)  # add 0.5 minutes to round
-	hours = floor(time)
-	minutes = floor((time- hours)* 60)
-	suffix = ' pm' if hours >= 12 else ' am'
-	hours = (hours+ 12- 1)% 12+ 1
-	return "%2d:%02d" % (hours, minutes) + ('' if noSuffix else suffix)
-
-# convert float hours to 12h format with no suffix
-def floatToTime12NS(time):
-	return floatToTime12(time, true);
-
-#---------------------- Trigonometric Functions -----------------------
-
-def dsin(d):
-    return sin(radians(d))
-
-# degree cos
-def dcos(d):
-    return cos(radians(d))
-
-# degree tan
-def dtan(d):
-    return tan(radians(d))
-
-# degree arcsin
-def darcsin(x):
-    return degrees(asin(x))
-
-# degree arccos
-def darccos(x):
-    return degrees(acos(x))
-
-# degree arctan
-def darctan(x):
-    return degrees(atan(x))
-
-# degree arctan2
-def darctan2(y, x):
-    return degrees(atan2(y, x))
-
-# degree arccot
-def darccot(x):
-    return degrees(atan(1.0/x))
-
-# range reduce angle in degrees.
-def fixangle(angle):
-	angle = angle - 360 * ( floor( angle / 360.0 ) )
-	return angle + 360 if angle < 0 else angle
-
-# range reduce hours to 0..23
-def fixhour(hour):
-	hour = hour - 24 * ( floor( hour / 24.0 ) )
-	return hour + 24 if hour < 0 else hour
-
 
 #---------------------- prayTime Object -----------------------
 
 prayTime = PrayTime()
-
-def main():
-    application = webapp.WSGIApplication([('/api/', MainHandler)],
-                                         debug=True)
-    util.run_wsgi_app(application)
-
-
-if __name__ == '__main__':
-    main()
