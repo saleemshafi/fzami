@@ -382,4 +382,4 @@ def julian(year, month, day):
 
 #---------------------- prayTime Object -----------------------
 
-prayTime = PrayTime()
+prayTime = PrayTimes()
