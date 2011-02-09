@@ -8,10 +8,11 @@ import re
 
 # --------------------- Copyright Block ----------------------
 
-# PrayTimes.js: Prayer Times Calculator (ver 2.1)
+# PrayTimes.py: Prayer Times Calculator (ver 2.1)
 # Copyright (C) 2007-2010 PrayTimes.org
 
 # Developer: Hamid Zarrabi-Zadeh
+#			 Saleem Shafi
 # License: GNU LGPL v3.0
 
 # TERMS OF USE:
@@ -47,11 +48,9 @@ import re
 
 #------------------------- Sample Usage --------------------------
 
-	# var PT = new PrayTimes('ISNA');
-	# var times = PT.getTimes(new Date(), [-80, 43], -5);
-	# document.write('Sunrise = '+ times.sunrise)
-
-
+	# PT = PrayTimes('ISNA');
+	# times = PT.getTimes(date.today(), (-80, 43), -5);
+	# print 'Sunrise = ', times['sunrise']
 
 #------------------------ Constants --------------------------
 
@@ -113,7 +112,7 @@ EPOCH = datetime.utcfromtimestamp(0)
 
 #----------------------- PrayTimes Object ------------------------
 
-class PrayTime():
+class PrayTimes():
 
 	def __init__( self, method = "MWL" ) :
 		self.settings = {

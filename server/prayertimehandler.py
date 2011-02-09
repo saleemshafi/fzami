@@ -47,7 +47,7 @@ class PrayerTimeHandler(webapp.RequestHandler):
 			if value != "":
 				offsets[offset] = int(value)
 			
-		praytime = PrayTime(method)
+		praytime = PrayTimes(method)
 		praytime.adjust(settings)
 		praytime.tune(offsets)
 		times = praytime.getTimes( today, location, timezone, dst, format )
@@ -72,4 +72,5 @@ class PrayerTimeHandler(webapp.RequestHandler):
 				jsonResponse += ', "'+name+'":"'+str(value)+'"'
 			jsonResponse += '}'
 		jsonResponse +=	'}'
+		jsonResponse += '  // Copyright (C) 2007-2010 PrayTimes.org'
 		self.response.out.write(jsonResponse)
