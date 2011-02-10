@@ -37,15 +37,20 @@ class PrayerTimeHandler(webapp.RequestHandler):
 			value = self.request.get(opt)
 			if value != "":
 				settings[opt] = value
+		# handle zuhr separately so we can translate between zuhr and dhuhr
 		value = self.request.get("zuhr")
 		if value != "":
 			settings["dhuhr"] = value
 
 		offsets = {}
-		for offset in ("fajr", "zuhr", "asr", "maghrib", "isha"):
+		for offset in ("fajr", "asr", "maghrib", "isha"):
 			value = self.request.get(offset+"-offset")
 			if value != "":
 				offsets[offset] = int(value)
+		# handle zuhr separately so we can translate between zuhr and dhuhr
+		value = self.request.get("zuhr-offset")
+		if value != "":
+			offsets["dhuhr"] = int(value)
 			
 		praytime = PrayTimes(method)
 		praytime.adjust(settings)

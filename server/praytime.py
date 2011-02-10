@@ -144,12 +144,10 @@ class PrayTimes():
 			self.calcMethod = method
 
 	def adjust(self, params):
-		for name, value in params.iteritems():
-			self.settings[name] = value
+		self.settings.update(params)
 
 	def tune(self, timeOffsets):
-		for name, value in timeOffsets.iteritems():
-			self.offsets[name] = value
+		self.offsets.update(timeOffsets)
 			
 	def getMethod(self):
 		return self.method
@@ -201,14 +199,14 @@ class PrayTimes():
 		times = dayPortion(times)
 		params = self.settings
 		
-		imsak   = self.sunAngleTime( eval(params['imsak']), times['imsak'], 'ccw')
-		fajr    = self.sunAngleTime( eval(params['fajr']), times['fajr'], 'ccw')
+		imsak   = self.sunAngleTime( extractNumber(params['imsak']), times['imsak'], 'ccw')
+		fajr    = self.sunAngleTime( extractNumber(params['fajr']), times['fajr'], 'ccw')
 		sunrise = self.sunAngleTime( riseSetAngle(self.elv), times['sunrise'], 'ccw')
 		dhuhr   = self.midDay(times['dhuhr'])
 		asr     = self.asrTime(asrFactor(params['asr']), times['asr'])
 		sunset  = self.sunAngleTime( riseSetAngle(self.elv), times['sunset'])
-		maghrib = self.sunAngleTime(eval(params['maghrib']), times['maghrib'])
-		isha    = self.sunAngleTime(eval(params['isha']), times['isha']) 
+		maghrib = self.sunAngleTime(extractNumber(params['maghrib']), times['maghrib'])
+		isha    = self.sunAngleTime(extractNumber(params['isha']), times['isha']) 
 		return {
 				'imsak': imsak, 'fajr': fajr, 'sunrise': sunrise, 'dhuhr': dhuhr,
 				'asr': asr, 'sunset': sunset, 'maghrib': maghrib, 'isha': isha
@@ -244,13 +242,13 @@ class PrayTimes():
 			times = self.adjustHighLats(times)
 
 		if isMin(params['imsak']):
-			times['imsak'] = times['fajr'] - eval(params['imsak']) / 60.0
+			times['imsak'] = times['fajr'] - extractNumber(params['imsak']) / 60.0
 		# need to ask about 'min' settings
 		if isMin(params['maghrib']):
-			times['maghrib'] = times['sunset'] - eval(params['maghrib']) / 60.0
+			times['maghrib'] = times['sunset'] - extractNumber(params['maghrib']) / 60.0
 		if isMin(params['isha']):
-			times['isha'] = times['maghrib'] - eval(params['isha']) / 60.0
-		times['dhuhr'] += eval(params['dhuhr']) / 60.0
+			times['isha'] = times['maghrib'] - extractNumber(params['isha']) / 60.0
+		times['dhuhr'] += extractNumber(params['dhuhr']) / 60.0
 
 		return times
 
@@ -270,10 +268,10 @@ class PrayTimes():
 	def adjustHighLats(self, times):
 		params = self.settings
 		nightTime = timeDiff(times['sunset'], times['sunrise']) # sunset to sunrise
-		times['imsak'] = self.adjustHLTime(times['imsak'], times['sunrise'], eval(params['imsak']), nightTime, 'ccw')
-		times['fajr']  = self.adjustHLTime(times['fajr'], times['sunrise'], eval(params['fajr']), nightTime, 'ccw')
-		times['isha']  = self.adjustHLTime(times['isha'], times['sunset'], eval(params['isha']), nightTime)
-		times['maghrib'] = self.adjustHLTime(times['maghrib'], times['sunset'], eval(params['maghrib']), nightTime)
+		times['imsak'] = self.adjustHLTime(times['imsak'], times['sunrise'], extractNumber(params['imsak']), nightTime, 'ccw')
+		times['fajr']  = self.adjustHLTime(times['fajr'], times['sunrise'], extractNumber(params['fajr']), nightTime, 'ccw')
+		times['isha']  = self.adjustHLTime(times['isha'], times['sunset'], extractNumber(params['isha']), nightTime)
+		times['maghrib'] = self.adjustHLTime(times['maghrib'], times['sunset'], extractNumber(params['maghrib']), nightTime)
 		return times
 
 	# adjust a time for higher latitudes
@@ -326,7 +324,7 @@ def sunPosition(jd):
 
 # get asr shadow factor
 def asrFactor(asrParam):
-	return PT_ASR_METHODS[asrParam] if asrParam in PT_ASR_METHODS else eval(asrParam)
+	return PT_ASR_METHODS[asrParam] if asrParam in PT_ASR_METHODS else extractNumber(asrParam)
 
 # return sun angle for sunset/sunrise
 def riseSetAngle(elevation = 0):
@@ -360,8 +358,8 @@ def isNaN(value):
 	return not isinstance( value, (float, int, long, complex) )
 
 # convert given string into a number
-def eval(str):
-	return int(re.split('[^0-9.+-]', ""+str, 1)[0]) if isNaN(str) else str
+def extractNumber(str):
+	return float(re.split('[^0-9.+-]', ""+str, 1)[0]) if isNaN(str) else str
 
 # detect if input contains 'min'
 def isMin(arg):
