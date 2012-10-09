@@ -1,14 +1,82 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-	<title>saleemshafi/fzami @ GitHub</title>
+<link   type="image/png" href="favicon.png" rel="icon" />
+<link   type="text/css" href="fzami.css" rel="stylesheet" />
+<link   type="text/css" href="datePicker.css" rel="stylesheet" />
+<script type="text/javascript" src="PrayTimes.js"></script>
+<script type="text/javascript" src="geometa.js"></script>
+<script type="text/javascript" src="jquery-1.5.2.js"></script>
+<script type="text/javascript" src="jquery.json-2.2.js"></script>
+<script type="text/javascript" src="date.f-0.5.0.js"></script>
+<script type="text/javascript" src="date.js"></script>
+<script type="text/javascript" src="jquery.datePicker.js"></script>
+
+<link href='http://fonts.googleapis.com/css?family=Amaranth' rel='stylesheet' type='text/css'>
+<title>fzami</title>
 </head>
 <body>
-	<ul>
-		<li><a href="/docs/api/prayertimes.html">Prayer Times API</a></li>
-	</ul>
+
+<div id="main_content">
+<table id="prayers" cellpadding="0">
+	<tr id="date"><th colspan="2" class="dp-choose-date"></th></tr>
+	<tr id="fajr"><td class="prayertime">--:--</td><th><b>F</b>ajr</th></tr>
+	<tr id="sunrise"><td class="prayertime">--:--</td><th>Sunrise</th></tr>
+	<tr id="zuhr"><td class="prayertime">--:--</td><th><b>Z</b>uhr</th></tr>
+	<tr id="asr"><td class="prayertime">--:--</td><th><b>A</b>sr</th></tr>
+	<tr id="maghrib"><td class="prayertime">--:--</td><th><b>M</b>aghrib</th></tr>
+	<tr id="isha"><td class="prayertime">--:--</td><th><b>I</b>sha</th></tr>
+</table>
+<div id="menu">
+	<div id="settings_button" class="button" onclick="editSettings()">Settings</div>
+	<div id="location_button" class="button" onclick="editLocation()">Location</div>
+</div>
+</div>
+
+
+<div id="settings">
+	<form id="settings_form">
+		<table>
+		<tr><td><label for="method">Calc Method: </label></td>
+		<td><select name="method=" id="method" onchange="updateCalcMethod(this.value)">
+			<option value="Egypt">Egypt</option>
+			<option value="ISNA">ISNA</option>
+			<option value="Jafari">Jafari</option>
+			<option value="Karachi">Karachi</option>
+			<option value="Makkah">Makkah</option>
+			<option value="MWL">MWL</option>
+			<option value="Tehran">Tehran</option>
+		</select></td></tr>
+		<tr><td><label for="asrMethod">Asr Method: </label></td>
+		<td><select name="asrMethod" id="asrMethod" onchange="updateAsrMethod(this.value)">
+			<option value="Hanafi">Hanafi</option>
+			<option value="Standard">Standard</option>
+		</select></td></tr>
+		<tr><td><label for="timeFormat">Time Format: </label></td>
+		<td><select name="timeFormat" id="timeFormat" onchange="updateTimeFormat(this.value)">
+			<option value="24h">24 hour</option>
+			<option value="12h">12 hour</option>
+		</select></td></tr>
+		</table>
+	</form>
+	<div class="modal_block" onclick="summarizeSettings()"></div>
+</div>
+
+<div id="location">
+	<form id="location_form">
+		<table>
+			<tr><td><label for="latitude">Latitude: </label></td><td><input type="text" name="latitude" id="latitude" onchange="updateLatitude(this.value)" value="" /></td></tr>
+			<tr><td><label for="longitude">Longitude: </label></td><td><input type="text" name="longitude" id="longitude" onchange="updateLongitude(this.value)" value="" /></td></tr>
+		</table>
+		<button type="button" onclick="getLocationFromBrowser(0); return false;">Update Automatically</button>
+	</form>
+	<div class="modal_block" onclick="summarizeLocation()"></div>
+</div>
+
+
+
+<script type="text/javascript" src="fzami.js"></script>
+
 </body>
 </html>
