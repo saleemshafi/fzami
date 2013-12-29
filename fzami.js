@@ -28,8 +28,8 @@ function getYearPrayerTimes() {
 
 function getXCoord( time, width ) {
 	var minsInDay = 24 * 60;
-        var hours = parseInt( time.substring(0, time.indexOf(":") ) );
-	var mins = parseInt( time.substring(time.indexOf(":")+1));
+        var hours = parseInt( time.substring(0, time.indexOf(":") ), 10 );
+	var mins = parseInt( time.substring(time.indexOf(":")+1), 10);
 	var totalMins = hours * 60 + mins;
 	return totalMins / minsInDay * width; 
 }
@@ -41,7 +41,8 @@ function runVisualization() {
 	var context = canvas.getContext("2d");
 	var height = canvas.height;
 	var width = canvas.width;
-	var yscale = height / 365;
+	var days = 365;
+	var yscale = height / days;
 
 	context.beginPath();
 	var prayers = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
@@ -49,15 +50,17 @@ function runVisualization() {
 	var prayer = prayers[prayerTime];
 	var y = 0;
 	context.moveTo( getXCoord( times[y][prayer], width ), y );
-	for (; y < 363; y++)
+	for (; y < days; y++)
 	{
-		var xc = (getXCoord(times[y][prayer], width) + getXCoord(times[y+1][prayer], width)) / 2;
-		var yc = (y + y+1) / 2;
-		context.quadraticCurveTo(getXCoord(times[y][prayer], width), y*yscale, xc, yc*yscale);
-//		context.lineTo( getXCoord( times[y][prayer], width), y);
+//		var xc = (getXCoord(times[y][prayer], width) + getXCoord(times[y+1][prayer], width)) / 2;
+//		var yc = (y + y+1) / 2;
+//		context.quadraticCurveTo(getXCoord(times[y][prayer], width), y*yscale, xc, yc*yscale);
+		context.lineTo( getXCoord( times[y][prayer], width), y*yscale);
+if (prayer == "fajr") 
+	console.log(times[y]["fajr"] + " --> " + getXCoord( times[y][prayer], width));
 	}
 	// curve through the last two points
-	context.quadraticCurveTo( getXCoord(times[y][prayer], width), y*yscale, getXCoord(times[y+1][prayer], width), (y+1)*yscale);
+//	context.quadraticCurveTo( getXCoord(times[y][prayer], width), y*yscale, getXCoord(times[y+1][prayer], width), (y+1)*yscale);
 	context.stroke();
 	}
 }
